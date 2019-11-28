@@ -1,0 +1,64 @@
+<html>
+    <head>
+        <style>
+            * {
+                font-size: 110%;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Shocking stuff</h1>
+        <form id="form">
+            <label for="mode">Mode</label>
+            <select name="mode" id="mode">
+                <option value="beep" selected>Beep</option>
+                <option value="vibrate">Vibrate</option>
+                <option value="shock">Shock</option>
+            </select>
+            <br>
+            <label for="level">Level (limited by server to 20)</label>
+            <input name="level" id="level" type="range" min="0" max="20" step="1" value="1"><output id="level-out">1</output>
+            <br>
+            <button id="submit" type="submit">Send 🔊</button>
+        </form>
+        <script>
+            const form = document.getElementById('form');
+            const levelInput = document.getElementById('level');
+            const modeInput = document.getElementById('mode');
+            const levelOutput = document.getElementById('level-out');
+            const submit = document.getElementById('submit');
+            const password = prompt('Password please :3 (checked by server when pressing button)');
+            const user = prompt('Please enter a username (not saved or anything') || 'anon';
+            const icons = {
+                beep: '🔊',
+                shock: '⚡',
+                vibrate: '📳'
+            }
+            function updateSend() {
+                const mean = levelInput.valueAsNumber >= 20 && modeInput.value === 'shock';
+                submit.innerText = `Send ${icons[modeInput.value]} ${mean ? '>:3' : ''}`;
+            }
+            levelInput.addEventListener('input', ev => {
+                levelOutput.value = levelInput.value;
+                updateSend();
+            });
+            modeInput.addEventListener('change', updateSend);
+            form.addEventListener('submit', ev => {
+                ev.preventDefault();
+                fetch('/', {
+                    method: 'post',
+                    headers: new Headers({
+                        authorization: `Bearer ${password}`,
+                        'x-user': user,
+                    }),
+                    body: `${modeInput.value},${levelInput.value}`,
+                })
+                .then(r => {
+                    if (r.status === 401) {
+                        alert('Wrong password, please reload and enter again (I am lazy).');
+                    }
+                });
+            })
+        </script>
+    </body>
+</html>
