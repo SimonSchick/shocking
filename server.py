@@ -1,12 +1,15 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import BaseHTTPServer
 import socketserver
 import ssl
 import socket
 import rf
 
-auth = 'test'
+auth = []
 
-maxLevel = 20
+maxLevel = 5
 
 commandMap = {
         "shock": rf.CMD_SHOCK,
@@ -27,7 +30,6 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.wfile.write(html)
 
         def applyHeaders(s):
-                s.send_header("Access-Control-Allow-Origin", "*")
                 s.send_header("Access-Control-Allow-Headers", "authorization")
 
         def do_OPTIONS(s):
@@ -35,13 +37,14 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.applyHeaders()
                 s.end_headers()
         def do_POST(s):
-                print(s.headers.getheader('x-user'))
                 authHeader = s.headers.getheader('authorization')
-                if not authHeader or authHeader != 'Bearer ' + auth:
+                if not authHeader or not authHeader.startswith('Bearer') or not authHeader.split(' ')[1] in auth:
+                        print(s.headers.getheader('x-user'), authHeader)
                         s.send_response(401)
                         s.applyHeaders()
                         s.end_headers()
                         return
+                print(s.headers.getheader('x-user'), authHeader.split(' ')[1])
                 data = s.rfile.read(int(s.headers.getheader('content-length') or '0'))
                 if len(data) == 0:
                         s.send_response(400)
@@ -49,6 +52,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         s.end_headers()
                         return
                 split = data.split(',')
+                print(split)
                 rf.sendFor(1000, commandMap[split[0]], min(int(split[1]), maxLevel))
                 s.send_response(200)
                 s.applyHeaders()

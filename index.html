@@ -5,9 +5,10 @@
                 font-size: 110%;
             }
         </style>
+        <title>Shock collar control</title>
     </head>
     <body>
-        <h1>Shocking stuff</h1>
+        <h1>Shock Collar control</h1>
         <form id="form">
             <label for="mode">Mode</label>
             <select name="mode" id="mode">
@@ -16,8 +17,8 @@
                 <option value="shock">Shock</option>
             </select>
             <br>
-            <label for="level">Level (limited by server to 20)</label>
-            <input name="level" id="level" type="range" min="0" max="20" step="1" value="1"><output id="level-out">1</output>
+            <label for="level">Level (limited by server to 5 (of 100))</label>
+            <input name="level" id="level" type="range" min="1" max="5" step="1" value="1"><output id="level-out">1</output>
             <br>
             <button id="submit" type="submit">Send 🔊</button>
         </form>
@@ -34,6 +35,11 @@
                 shock: '⚡',
                 vibrate: '📳'
             }
+            function setInputLock(locked) {
+                Array.from(form.querySelectorAll('input,select,button')).forEach(e => {
+                    e.disabled = locked;
+                });
+            }
             function updateSend() {
                 const mean = levelInput.valueAsNumber >= 20 && modeInput.value === 'shock';
                 submit.innerText = `Send ${icons[modeInput.value]} ${mean ? '>:3' : ''}`;
@@ -45,19 +51,28 @@
             modeInput.addEventListener('change', updateSend);
             form.addEventListener('submit', ev => {
                 ev.preventDefault();
-                fetch('/', {
-                    method: 'post',
-                    headers: new Headers({
-                        authorization: `Bearer ${password}`,
-                        'x-user': user,
-                    }),
-                    body: `${modeInput.value},${levelInput.value}`,
+                setInputLock(true);
+                Promise.all([
+                    new Promise(res => setTimeout(res, 2500)),
+                    fetch('/', {
+                        method: 'post',
+                        headers: new Headers({
+                            authorization: `Bearer ${password}`,
+                            'x-user': user,
+                        }),
+                        body: `${modeInput.value},${levelInput.value}`,
+                    })
+                    .then(r => {
+                        if (r.status === 401) {
+                            setInputLock(true);
+                            alert('Wrong password, please reload and enter again (I am lazy).');
+                            throw new Error('disabled :3');
+                        }
+                    })
+                ])
+                .then(() => {
+                    setInputLock(false);
                 })
-                .then(r => {
-                    if (r.status === 401) {
-                        alert('Wrong password, please reload and enter again (I am lazy).');
-                    }
-                });
             })
         </script>
     </body>
