@@ -12,21 +12,30 @@
         <form id="form">
             <label for="mode">Mode</label>
             <select name="mode" id="mode">
-                <option value="beep" selected>Beep</option>
-                <option value="vibrate">Vibrate</option>
-                <option value="shock">Shock</option>
             </select>
             <br>
-            <label for="level">Level (limited by server to 3 (of 100))</label>
-            <input name="level" id="level" type="range" min="1" max="3" step="1" value="1"><output id="level-out">1</output>
+            <label for="level" id="levelLabel"></label>
+            <input name="level" id="level" type="range" min="1" max="30" step="1" value="1"><output id="level-out">1</output>
             <br>
             <button id="submit" type="submit">Send 🔊</button>
         </form>
         <script>
-            const max = 3;
+            $capabilities$
             const form = document.getElementById('form');
             const levelInput = document.getElementById('level');
+            levelInput.max = capabilities.maxLevel;
+            const levelLabel = document.getElementById('levelLabel');
+            levelLabel.textContent = `Level (limited by server to ${capabilities.maxLevel} (of 100))`;
+
             const modeInput = document.getElementById('mode');
+
+            for(const cap of capabilities.permissions) {
+                const opt = document.createElement('option');
+                opt.value = cap;
+                opt.textContent = cap[0].toUpperCase() + cap.slice(1);
+                modeInput.appendChild(opt);
+            }
+
             const levelOutput = document.getElementById('level-out');
             const submit = document.getElementById('submit');
             const icons = {
@@ -40,7 +49,7 @@
                 });
             }
             function updateSend() {
-                const mean = levelInput.valueAsNumber >= max/2 && modeInput.value === 'shock';
+                const mean = levelInput.valueAsNumber >= capabilities.maxLevel/2 && modeInput.value === 'shock';
                 submit.innerText = `Send ${icons[modeInput.value]} ${mean ? '>:3' : ''}`;
             }
             levelInput.addEventListener('input', ev => {

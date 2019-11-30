@@ -7,11 +7,17 @@ import ssl
 import socket
 import rf
 import base64
+import json
 
 authMap = {
+        # "testuser": {
+        #         "password": "yes",
+        #         "capabilities": {
+        #                 "maxLevel": 10,
+        #                 "permissions": ["vibrate", "shock", "beep"]
+        #         }
+        # },
 }
-
-maxLevel = 3
 
 commandMap = {
         "shock": rf.CMD_SHOCK,
@@ -29,6 +35,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.send_header('WWW-Authenticate', 'Basic realm=\"Shocking\"')
                 s.end_headers()
 
+
         def checkauth(s):
                 authHeader = s.headers.getheader('authorization')
                 if not authHeader or not authHeader.startswith('Basic'):
@@ -45,20 +52,21 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         print('invalid base64')
                         s.requireAuth()
                         return False
-                if not decoded[0] in authMap or authMap[decoded[0]] != decoded[1]:
+                if not decoded[0] in authMap or authMap[decoded[0]]['password'] != decoded[1]:
                         print('invalid user', decoded)
                         s.requireAuth()
                         return False
                 print('authed', decoded)
-                return True
+                return authMap[decoded[0]]
 
         def do_GET(s):
-                if not s.checkauth():
+                profile = s.checkauth()
+                if not profile:
                         return
                 s.send_response(200)
                 s.send_header("Content-Type", "text/html; charset=utf-8")
                 s.end_headers()
-                s.wfile.write(html)
+                s.wfile.write(html.replace('$capabilities$', 'const capabilities = ' + json.dumps(profile['capabilities'])))
 
         def do_OPTIONS(s):
                 s.send_response(200)
@@ -66,7 +74,8 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.end_headers()
 
         def do_POST(s):
-                if not s.checkauth():
+                profile = s.checkauth()
+                if not profile:
                         return
                 data = s.rfile.read(int(s.headers.getheader('content-length') or '0'))
                 if len(data) == 0:
@@ -79,7 +88,11 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         s.send_response(400)
                         s.end_headers()
                         return
-                rf.sendFor(1000, commandMap[split[0]], min(int(split[1]), maxLevel))
+                if not split[0] in profile['capabilities']['permissions']:
+                        s.send_response(403)
+                        s.end_headers()
+                        return
+                rf.sendFor(1000, commandMap[split[0]], min(int(split[1]), profile['capabilities']['maxLevel']))
                 s.send_response(200)
                 s.end_headers()
 
