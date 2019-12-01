@@ -20,19 +20,7 @@ def _add_crc8(b, crc):
             crc ^= 0x8C # this means crc ^= 140
     return crc
 
-d = RfCat()
-
-d.setFreq(915000000)
-d.setPktPQT(100)
-d.makePktFLEN(9)
-d.setMdmDRate(2400)
-d.setMdmSyncWord(0b1010101000110011) # 0xAA33
-d.setMdmModulation(MOD_2FSK)
-d.setMdmSyncMode(SYNCM_CARRIER_16_of_16)
-d.setMaxPower()
-
 PREAMBLE = unhexlify('5464d2')
-PREFIX = unhexlify('2938')
 
 CMD_SHOCK = 0b11
 CMD_BEEP  = 0b01
@@ -42,34 +30,47 @@ TARGET_A  = 0b00
 TARGET_B  = 0b01
 TARGET_AB = 0b10
 
-CMD_ID = 0x0
-def buildPkt(cmd, level=0, target=TARGET_A):
-        global CMD_ID
-        CMD_ID += 1
-        if CMD_ID > 0xFF:
-                CMD_ID = 0
+class ShockController:
+        def __init__(self):
+                d = RfCat()
 
-        cmd = int(cmd)
-        target = int(target)
-        level = int(level)
+                d.setFreq(915000000)
+                d.setPktPQT(100)
+                d.makePktFLEN(9)
+                d.setMdmDRate(2400)
+                d.setMdmSyncWord(0b1010101000110011) # 0xAA33
+                d.setMdmModulation(MOD_2FSK)
+                d.setMdmSyncMode(SYNCM_CARRIER_16_of_16)
+                d.setMaxPower()
+                self.d = d
+                self.cmdCounter = 0
 
-        if cmd == CMD_BEEP:
-                level = 0
+        def buildPkt(self, device, cmd, level=0, target=TARGET_A):
+                self.cmdCounter += 1
+                if cmdCounter > 0xFF:
+                        CMD_ID = 0
 
-        if cmd > 0b11 or cmd < 0b00:
-                raise ValueError('CMD invalid')
+                cmd = int(cmd)
+                target = int(target)
+                level = int(level)
 
-        if target > 0b11 or target < 0b00:
-                raise ValueError('TARGET invalid')
+                if cmd == CMD_BEEP:
+                        level = 0
 
-        if level < 0 or level > 100:
-                raise ValueError('LEVEL invalid')
+                if cmd > 0b11 or cmd < 0b00:
+                        raise ValueError('CMD invalid')
 
-        pkt = PREFIX + chr(level) + chr(cmd << 4 | target << 2) + chr(CMD_ID)
-        return PREAMBLE + pkt + chr(crc8(pkt))
+                if target > 0b11 or target < 0b00:
+                        raise ValueError('TARGET invalid')
 
-def sendFor(duration, cmd, level=5, target=TARGET_A):
-        endTime = datetime.now() + timedelta(milliseconds=duration)
-        pkt = buildPkt(cmd, level, target)
-        while datetime.now() <= endTime:
-                d.RFxmit(pkt)
+                if level < 0 or level > 100:
+                        raise ValueError('LEVEL invalid')
+
+                pkt = device + chr(level) + chr(cmd << 4 | target << 2) + chr(CMD_ID)
+                return PREAMBLE + pkt + chr(crc8(pkt))
+
+        def sendFor(self, device, mode, duration, level, target=TARGET_A):
+                endTime = datetime.now() + timedelta(milliseconds=duration)
+                pkt = self.buildPkt(mode, device, level, target)
+                while datetime.now() <= endTime:
+                        d.RFxmit(pkt)

@@ -19,6 +19,11 @@ authMap = {
         # },
 }
 
+units = {
+        "left": rf.unhexlify('2938'),
+        "right": rf.unhexlify('8910'), # crash
+}
+
 commandMap = {
         "shock": rf.CMD_SHOCK,
         "beep": rf.CMD_BEEP,
@@ -28,6 +33,8 @@ commandMap = {
 file = open('index.html', 'rb')
 html = file.read()
 file.close()
+
+rf = rf.ShockController()
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def requireAuth(s):
@@ -66,7 +73,10 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.send_response(200)
                 s.send_header("Content-Type", "text/html; charset=utf-8")
                 s.end_headers()
-                s.wfile.write(html.replace('$capabilities$', 'const capabilities = ' + json.dumps(profile['capabilities'])))
+                s.wfile.write(html.replace('$config$', 'const config = ' + json.dumps({
+                        'capabilities': profile['capabilities'],
+                        'units': units.keys()
+                })))
 
         def do_OPTIONS(s):
                 s.send_response(200)
@@ -84,15 +94,22 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         return
                 split = data.split(',')
                 print(split)
-                if not split[0] in commandMap:
+                if len(split) != 4 and not split[0] in units or not split[1] in commandMap:
                         s.send_response(400)
                         s.end_headers()
                         return
-                if not split[0] in profile['capabilities']['permissions']:
+                caps = profile['capabilities']
+                if not split[1] in caps['permissions']:
                         s.send_response(403)
                         s.end_headers()
                         return
-                rf.sendFor(1000, commandMap[split[0]], min(int(split[1]), profile['capabilities']['maxLevel']))
+                # unit,mode,duration,level
+                rf.sendFor(
+                        units[split[0]],
+                        commandMap[split[1]],
+                        min(int(split[2]), caps['maxDuration']),
+                        min(int(split[3]), caps['maxLevel'])
+                )
                 s.send_response(200)
                 s.end_headers()
 

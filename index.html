@@ -2,69 +2,36 @@
     <head>
         <style>
             * {
-                font-size: 110%;
+                font-size: 105%;
+            }
+            table, tr, td {
+                border: 1px solid black;
             }
         </style>
         <title>Shock collar control</title>
     </head>
     <body>
         <h1>Shock Collar control</h1>
-        <form id="form">
-            <label for="mode">Mode</label>
-            <select name="mode" id="mode">
-            </select>
-            <br>
-            <label for="level" id="levelLabel"></label>
-            <input name="level" id="level" type="range" min="1" max="30" step="1" value="1"><output id="level-out">1</output>
-            <br>
-            <button id="submit" type="submit">Send 🔊</button>
-        </form>
+        <table>
+            <thead>
+                <tr><th>Collar</th><th>Strength</th><th>Duration (in MS)</th><th colspan="3">Action</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
         <script>
-            $capabilities$
-            const form = document.getElementById('form');
-            const levelInput = document.getElementById('level');
-            levelInput.max = capabilities.maxLevel;
-            const levelLabel = document.getElementById('levelLabel');
-            levelLabel.textContent = `Level (limited by server to ${capabilities.maxLevel} (of 100))`;
-
-            const modeInput = document.getElementById('mode');
-
-            for(const cap of capabilities.permissions) {
-                const opt = document.createElement('option');
-                opt.value = cap;
-                opt.textContent = cap[0].toUpperCase() + cap.slice(1);
-                modeInput.appendChild(opt);
-            }
-
-            const levelOutput = document.getElementById('level-out');
-            const submit = document.getElementById('submit');
-            const icons = {
-                beep: '🔊',
-                shock: '⚡',
-                vibrate: '📳'
-            }
+            $config$
             function setInputLock(locked) {
-                Array.from(form.querySelectorAll('input,select,button')).forEach(e => {
+                Array.from(document.querySelectorAll('input,select,button')).forEach(e => {
                     e.disabled = locked;
                 });
             }
-            function updateSend() {
-                const mean = levelInput.valueAsNumber >= capabilities.maxLevel/2 && modeInput.value === 'shock';
-                submit.innerText = `Send ${icons[modeInput.value]} ${mean ? '>:3' : ''}`;
-            }
-            levelInput.addEventListener('input', ev => {
-                levelOutput.value = levelInput.value;
-                updateSend();
-            });
-            modeInput.addEventListener('change', updateSend);
-            form.addEventListener('submit', ev => {
-                ev.preventDefault();
+            function sendAction(unit, mode, duration, level) {
                 setInputLock(true);
                 Promise.all([
                     new Promise(res => setTimeout(res, 2500)),
                     fetch('/', {
                         method: 'post',
-                        body: `${modeInput.value},${levelInput.value}`,
+                        body: `${unit},${mode},${duration},${level}`,
                     })
                     .then(r => {
                         if (r.status === 401) {
@@ -77,7 +44,67 @@
                 .then(() => {
                     setInputLock(false);
                 })
-            })
+            }
+
+            const icons = {
+                beep: '🔊',
+                shock: '⚡',
+                vibrate: '📳'
+            }
+
+            function makeRange(min, max, step) {
+                const container = document.createElement('div');
+                const levelRange = document.createElement('input');
+                levelRange.type = 'range';
+                levelRange.step = step;
+                levelRange.min = min;
+                levelRange.max = max;
+                levelRange.valueAsNumber = min;
+                const levelRangeMin = document.createElement('span');
+                levelRangeMin.innerText = min.toString();
+                container.appendChild(levelRangeMin);
+                container.appendChild(levelRange);
+                const levelRangeCurrent = document.createElement('output');
+                levelRangeCurrent.value = min;
+                levelRange.addEventListener('input', () => {
+                    levelRangeCurrent.value = levelRange.valueAsNumber;
+                });
+                container.appendChild(levelRangeCurrent);
+                return [container, levelRange];
+            }
+
+            const tableBody = document.getElementById('tbody');
+            for(const name of config.units) {
+                const levelInput = document.getElementById('level');
+                const row = document.createElement('tr');
+
+                const nameColumn = document.createElement('td');
+                nameColumn.innerText = name;
+                row.appendChild(nameColumn);
+
+                const levelColumn = document.createElement('td');
+                const [levelContainer, levelRange] = makeRange(1, config.capabilities.maxLevel, 1);
+                levelColumn.appendChild(levelContainer);
+                row.appendChild(levelColumn);
+
+                const durationColumn = document.createElement('td');
+                const [durationContainer, durationRange] = makeRange(250, config.capabilities.maxDuration, 50)
+                durationColumn.appendChild(durationContainer);
+                row.appendChild(durationColumn);
+
+                const actionColumn = document.createElement('td');
+                for(const cap of config.capabilities.permissions) {
+                    const btn = document.createElement('button');
+                    btn.textContent = `${cap[0].toUpperCase() + cap.slice(1)} ${icons[cap]}`;
+                    btn.addEventListener('click', ev => {
+                        sendAction(name, cap, durationRange.valueAsNumber, levelRange.valueAsNumber);
+                    });
+                    actionColumn.appendChild(btn);
+                }
+                row.appendChild(actionColumn);
+
+                tableBody.appendChild(row);
+            }
         </script>
     </body>
 </html>
