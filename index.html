@@ -2,22 +2,44 @@
     <head>
         <style>
             * {
+                font-family: Arial,"Helvetica Neue",Helvetica,sans-serif;
                 font-size: 105%;
+                color: #bbb;
             }
-            table, tr, td {
-                border: 1px solid black;
+            button {
+                background-color: #888;
+            }
+            tbody > tr:nth-child(odd) {
+                background-color: #999;
+            }
+            tbody > tr:nth-child(even) {
+                background-color: #777;
+            }
+
+            #wrapper {
+                display: flex;
+                justify-content: center;
+            }
+
+            body {
+                background-color: #444;
             }
         </style>
         <title>Shock collar control</title>
     </head>
     <body>
-        <h1>Shock Collar control</h1>
-        <table>
-            <thead>
-                <tr><th>Collar</th><th>Strength</th><th>Duration (in MS)</th><th colspan="3">Action</th></tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
+        <div id="wrapper">
+            <div id="center">
+                <h1>Shock Collar control</h1>
+                <br>
+                <table>
+                    <thead>
+                        <tr><th>Collar</th><th>Strength</th><th>Duration (in MS)</th><th colspan="3">Action</th></tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </div>
         <script>
             $config$
             function setInputLock(locked) {
@@ -28,7 +50,7 @@
             function sendAction(unit, mode, duration, level) {
                 setInputLock(true);
                 Promise.all([
-                    new Promise(res => setTimeout(res, 2500)),
+                    new Promise(res => setTimeout(res, duration + 500)),
                     fetch('/', {
                         method: 'post',
                         body: `${unit},${mode},${duration},${level}`,
