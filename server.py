@@ -20,8 +20,7 @@ authMap = {
 }
 
 units = {
-        "left": rf.unhexlify('2938'),
-        "right": rf.unhexlify('8910'), # crash
+        "display-name": rf.unhexlify('0000'),
 }
 
 commandMap = {
