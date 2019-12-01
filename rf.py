@@ -47,8 +47,8 @@ class ShockController:
 
         def buildPkt(self, device, cmd, level=0, target=TARGET_A):
                 self.cmdCounter += 1
-                if cmdCounter > 0xFF:
-                        CMD_ID = 0
+                if self.cmdCounter > 0xFF:
+                        self.cmdCounter = 0
 
                 cmd = int(cmd)
                 target = int(target)
@@ -66,11 +66,11 @@ class ShockController:
                 if level < 0 or level > 100:
                         raise ValueError('LEVEL invalid')
 
-                pkt = device + chr(level) + chr(cmd << 4 | target << 2) + chr(CMD_ID)
+                pkt = device + chr(level) + chr(cmd << 4 | target << 2) + chr(self.cmdCounter)
                 return PREAMBLE + pkt + chr(crc8(pkt))
 
         def sendFor(self, device, mode, duration, level, target=TARGET_A):
                 endTime = datetime.now() + timedelta(milliseconds=duration)
-                pkt = self.buildPkt(mode, device, level, target)
+                pkt = self.buildPkt(device, mode, level, target)
                 while datetime.now() <= endTime:
-                        d.RFxmit(pkt)
+                        self.d.RFxmit(pkt)
