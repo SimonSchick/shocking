@@ -28,12 +28,15 @@ Then execute
 
 ```python
 d.ping()
-d.setFreq(433000000)
-d.setMdmModulation(MOD_ASK_OOK)
-d.makePktFLEN(250)
-d.RFxmit("HALLO")
-d.RFrecv()
-print(d.reprRadioConfig())
+d.setFreq(915000000)
+d.setPktPQT(100)
+d.makePktFLEN(9)
+d.setMdmDRate(2400)
+d.setMdmSyncWord(0b1010101000110011) # 0xAA33
+d.setMdmModulation(MOD_2FSK)
+d.setMdmSyncMode(SYNCM_CARRIER_16_of_16)
+d.setMaxPower()
+d.ping()
 d.RFlisten()
 ```
 
