@@ -66,8 +66,8 @@ class ShockController:
                 if level < 0 or level > 100:
                         raise ValueError('LEVEL invalid')
 
-                pkt = device + chr(level) + chr(cmd << 4 | target << 2) + chr(self.cmdCounter)
-                return PREAMBLE + pkt + chr(crc8(pkt))
+                pkt = device + level.to_bytes(1, 'big') + (cmd << 4 | target << 2).to_bytes(1, 'big') + (self.cmdCounter).to_bytes(1, 'big')
+                return PREAMBLE + pkt + crc8(pkt).to_bytes(1, 'big')
 
         def sendFor(self, device, mode, duration, level, target=TARGET_A):
                 endTime = datetime.now() + timedelta(milliseconds=duration)

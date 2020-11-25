@@ -4,7 +4,7 @@
 
 - [Shock Collar](https://www.amazon.com/gp/product/B07TDCWDRF)
 - [YardStick One](https://greatscottgadgets.com/yardstickone/)
-- python2
+- python3
 - [RFCat](https://github.com/atlas0fd00m/rfcat)
 
 ## Device registration
@@ -67,7 +67,7 @@ See the `authMap` dict in `server.py` and add your user+password and restriction
 
 ## Running
 
-- Run `server.py` using `python 2.7`.
+- Run `server.py` using `python 3.8` (or newer).
 - Open the website.
 - ⚡️⚡️⚡️
 

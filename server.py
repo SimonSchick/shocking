@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import BaseHTTPServer
+from http.server import BaseHTTPRequestHandler,HTTPServer
 import socketserver
 import ssl
 import socket
@@ -10,17 +10,18 @@ import base64
 import json
 
 authMap = {
-        # "testuser": {
-        #         "password": "yes",
-        #         "capabilities": {
-        #                 "maxLevel": 10,
-        #                 "permissions": ["vibrate", "shock", "beep"]
-        #         }
-        # },
+        "testuser": {
+                "password": "yes",
+                "capabilities": {
+                        "maxLevel": 10,
+                        "maxDuration": 1000,
+                        "permissions": ["vibrate", "shock", "beep"]
+                }
+        },
 }
 
 units = {
-        "display-name": rf.unhexlify('0000'),
+    "display-name": rf.unhexlify('8910'),
 }
 
 commandMap = {
@@ -29,13 +30,13 @@ commandMap = {
         "vibrate": rf.CMD_BUZZ
 }
 
-file = open('index.html', 'rb')
+file = open('index.html', 'r')
 html = file.read()
 file.close()
 
 rf = rf.ShockController()
 
-class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class MyHandler(BaseHTTPRequestHandler):
         def requireAuth(s):
                 s.send_response(401)
                 s.send_header('WWW-Authenticate', 'Basic realm=\"Shocking\"')
@@ -43,7 +44,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
         def checkauth(s):
-                authHeader = s.headers.getheader('authorization')
+                authHeader = s.headers.get('authorization')
                 if not authHeader or not authHeader.startswith('Basic'):
                         print('invalid auth header')
                         s.requireAuth()
@@ -53,7 +54,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         print('invalid basic auth')
                         s.requireAuth()
                         return False
-                decoded = base64.b64decode(split[1]).split(':')
+                decoded = base64.b64decode(split[1]).decode("utf-8").split(':')
                 if len(decoded) != 2:
                         print('invalid base64')
                         s.requireAuth()
@@ -74,8 +75,8 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.end_headers()
                 s.wfile.write(html.replace('$config$', 'const config = ' + json.dumps({
                         'capabilities': profile['capabilities'],
-                        'units': units.keys()
-                })))
+                        'units': list(units.keys())
+                })).encode())
 
         def do_OPTIONS(s):
                 s.send_response(200)
@@ -86,13 +87,12 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 profile = s.checkauth()
                 if not profile:
                         return
-                data = s.rfile.read(int(s.headers.getheader('content-length') or '0'))
+                data = s.rfile.read(int(s.headers.get('content-length') or '0'))
                 if len(data) == 0:
                         s.send_response(400)
                         s.end_headers()
                         return
-                split = data.split(',')
-                print(split)
+                split = data.decode('utf-8').split(',')
                 if len(split) != 4 and not split[0] in units or not split[1] in commandMap:
                         s.send_response(400)
                         s.end_headers()
@@ -112,7 +112,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 s.send_response(200)
                 s.end_headers()
 
-class HTTPServerV6(BaseHTTPServer.HTTPServer):
+class HTTPServerV6(HTTPServer):
     address_family = socket.AF_INET6
 
 httpd = HTTPServerV6(('::', 443), MyHandler)
